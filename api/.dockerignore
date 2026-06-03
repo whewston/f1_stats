@@ -1,0 +1,10 @@
+# Build artifacts
+**/bin/
+**/obj/
+
+# These don't belong in the image
+.dockerignore
+Dockerfile
+**/.vs/
+**/.vscode/
+**/*.user

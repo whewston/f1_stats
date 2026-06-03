@@ -1,0 +1,36 @@
+# ---- .NET ----
+bin/
+obj/
+*.user
+*.suo
+appsettings.*.local.json
+
+# Local databases (if you run SQLite outside Docker)
+*.db
+*.db-shm
+*.db-wal
+
+# ---- Docker ----
+# Local compose overrides (machine-specific tweaks live here, not in git)
+docker-compose.override.yml
+# Bind-mount data dirs, if you ever switch from named volumes to ./data
+data/
+
+# ---- Secrets / env ----
+.env
+.env.*
+# ...but DO keep the committed template
+!.env.example
+
+# ---- Node / front end (Phase 2) ----
+node_modules/
+dist/
+.expo/
+*.log
+
+# ---- Editors / OS ----
+.vs/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

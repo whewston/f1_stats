@@ -1,7 +1,12 @@
+using F1Stats.Core;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Built-in OpenAPI (serves /openapi/v1.json in Development).
 builder.Services.AddOpenApi();
+
+builder.Services.AddDbContext<F1DbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 
 var app = builder.Build();
 
@@ -10,13 +15,14 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-// Liveness probe — used by Docker/compose healthchecks and hosting platforms.
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
-   .WithName("Health");
+    .WithName("Health");
 
-// --- Stub endpoints (real data arrives once EF Core + Jolpica ingestion land) ---
-// TODO Phase 1: replace with DB-backed queries. See docs/architecture.md.
-app.MapGet("/api/seasons", () => new[] { 2023, 2024, 2025 })
-   .WithName("GetSeasons");
+// Real query now — returns [] until ingestion populates the DB.
+app.MapGet("/api/seasons", async (F1DbContext db) =>
+        await db.Seasons.OrderByDescending(s => s.Year)
+            .Select(s => s.Year)
+            .ToListAsync())
+    .WithName("GetSeasons");
 
 app.Run();

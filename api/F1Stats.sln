@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "F1Stats.Api", "src\F1Stats.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "F1Stats.Core", "src\F1Stats.Core\F1Stats.Core.csproj", "{3E287F54-62A6-4CA3-9156-192875C4DD66}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "F1Stats.Ingestion", "src\F1Stats.Ingestion\F1Stats.Ingestion.csproj", "{7A699C90-300F-4129-8786-5A9952E57070}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -43,6 +45,18 @@ Global
 		{3E287F54-62A6-4CA3-9156-192875C4DD66}.Release|x64.Build.0 = Release|Any CPU
 		{3E287F54-62A6-4CA3-9156-192875C4DD66}.Release|x86.ActiveCfg = Release|Any CPU
 		{3E287F54-62A6-4CA3-9156-192875C4DD66}.Release|x86.Build.0 = Release|Any CPU
+		{7A699C90-300F-4129-8786-5A9952E57070}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7A699C90-300F-4129-8786-5A9952E57070}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7A699C90-300F-4129-8786-5A9952E57070}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7A699C90-300F-4129-8786-5A9952E57070}.Debug|x64.Build.0 = Debug|Any CPU
+		{7A699C90-300F-4129-8786-5A9952E57070}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7A699C90-300F-4129-8786-5A9952E57070}.Debug|x86.Build.0 = Debug|Any CPU
+		{7A699C90-300F-4129-8786-5A9952E57070}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7A699C90-300F-4129-8786-5A9952E57070}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7A699C90-300F-4129-8786-5A9952E57070}.Release|x64.ActiveCfg = Release|Any CPU
+		{7A699C90-300F-4129-8786-5A9952E57070}.Release|x64.Build.0 = Release|Any CPU
+		{7A699C90-300F-4129-8786-5A9952E57070}.Release|x86.ActiveCfg = Release|Any CPU
+		{7A699C90-300F-4129-8786-5A9952E57070}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -50,5 +64,6 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{9B3E62DF-0A75-4212-9F48-B5DD2177D306} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{3E287F54-62A6-4CA3-9156-192875C4DD66} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{7A699C90-300F-4129-8786-5A9952E57070} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal

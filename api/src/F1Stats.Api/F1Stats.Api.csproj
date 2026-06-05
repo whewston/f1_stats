@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\F1Stats.Core\F1Stats.Core.csproj" />
+    <ProjectReference Include="..\F1Stats.Ingestion\F1Stats.Ingestion.csproj" />
   </ItemGroup>
 
 </Project>

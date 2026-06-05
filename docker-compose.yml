@@ -1,6 +1,3 @@
-# Local dev stack. `docker compose up --build` brings up the API and Postgres.
-# The API doesn't talk to the DB yet (no EF Core until Phase 1), but it's wired.
-
 services:
   api:
     build:
@@ -11,11 +8,19 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_HTTP_PORTS: "8080"
-      # ASP.NET Core reads this as ConnectionStrings:Default
       ConnectionStrings__Default: "Host=db;Port=5432;Database=f1stats;Username=f1stats;Password=${POSTGRES_PASSWORD}"
     depends_on:
       db:
         condition: service_healthy
+
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
 
   db:
     image: postgres:16-alpine

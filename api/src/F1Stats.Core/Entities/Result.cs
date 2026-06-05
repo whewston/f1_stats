@@ -10,7 +10,7 @@ public class Result
     public int? Grid { get; set; }                      // start position
     public int? Position { get; set; }                  // finish position (null if DNF)
     public string PositionText { get; set; } = default!; // "1", "R", "D"...
-    public int Points { get; set; }
+    public decimal Points { get; set; }
     public string Status { get; set; } = default!;      // "Finished", "+1 Lap", "Engine"...
     public int Laps { get; set; }
     public string? FastestLapTime { get; set; }

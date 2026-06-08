@@ -16,6 +16,11 @@ export interface NextRace {
     circuitName: string; country: string | null; locality: string | null
 }
 
+export interface DriverStanding {
+    position: number; driver: string; code: string | null
+    constructor: string | null; points: number; wins: number
+}
+
 async function getJson<T>(url: string): Promise<T | null> {
     const res = await fetch(url)
     if (res.status === 404) return null
@@ -28,4 +33,6 @@ export const api = {
     races: (year: number) => getJson<RaceSummary[]>(`/api/seasons/${year}/races`),
     results: (year: number, round: number) => getJson<RaceResults>(`/api/seasons/${year}/races/${round}/results`),
     nextRace: () => getJson<NextRace>('/api/races/next'),
+    driverStandings: (year: number) => getJson<DriverStanding[]>(`/api/seasons/${year}/standings/drivers`),
 }
+

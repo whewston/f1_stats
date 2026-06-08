@@ -1,6 +1,7 @@
 ﻿using F1Stats.Api.Contracts;
 using F1Stats.Core;
 using Microsoft.EntityFrameworkCore;
+using F1Stats.Api.Services;
 
 namespace F1Stats.Api.Endpoints;
 
@@ -71,6 +72,38 @@ public static class F1Endpoints
 
             return next is null ? Results.NotFound() : Results.Ok(next);
         }).WithName("GetNextRace");
+        
+        // F12 — current drivers' standings
+        api.MapGet("/seasons/{year:int}/standings/drivers", async (int year, F1DbContext db) =>
+        {
+            var standings = await db.DriverStandings
+                .Where(s => s.Year == year)
+                .OrderBy(s => s.Position)
+                .Select(s => new DriverStandingDto(
+                    s.Position,
+                    s.Driver.GivenName + " " + s.Driver.FamilyName,
+                    s.Driver.Code,
+                    s.Constructor != null ? s.Constructor.Name : null,
+                    s.Points,
+                    s.Wins))
+                .ToListAsync();
+
+            return standings.Count == 0 ? Results.NotFound() : Results.Ok(standings);
+        }).WithName("GetDriverStandings");
+        
+        // Driver profile + all-time + per-season
+        api.MapGet("/drivers/{driverId}", async (string driverId, StatsService stats, CancellationToken ct) =>
+        {
+            var profile = await stats.GetDriverAsync(driverId, ct);
+            return profile is null ? Results.NotFound() : Results.Ok(profile);
+        }).WithName("GetDriver");
+
+        // Constructor profile + all-time + per-season
+        api.MapGet("/constructors/{constructorId}", async (string constructorId, StatsService stats, CancellationToken ct) =>
+        {
+            var profile = await stats.GetConstructorAsync(constructorId, ct);
+            return profile is null ? Results.NotFound() : Results.Ok(profile);
+        }).WithName("GetConstructor");
 
         return api;
     }

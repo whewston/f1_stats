@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace F1Stats.Ingestion;
 
-public record IngestionResult(int Year, int RacesUpserted, int RoundsIngested, int ResultsUpserted);
+public record IngestionResult(int Year, int RacesUpserted, int RoundsIngested, int ResultsUpserted, int StandingsUpserted);
 
 public class IngestionService(F1DbContext db, JolpicaClient jolpica, ILogger<IngestionService> logger)
 {
@@ -38,6 +38,7 @@ public class IngestionService(F1DbContext db, JolpicaClient jolpica, ILogger<Ing
                 circuits[circuit.CircuitId] = circuit;
                 db.Circuits.Add(circuit);
             }
+
             circuit.Name = jr.Circuit.CircuitName;
             circuit.Locality = jr.Circuit.Location?.Locality;
             circuit.Country = jr.Circuit.Location?.Country;
@@ -50,6 +51,7 @@ public class IngestionService(F1DbContext db, JolpicaClient jolpica, ILogger<Ing
                 races[round] = race;
                 db.Races.Add(race);
             }
+
             race.RaceName = jr.RaceName;
             race.Date = ParseDate(jr.Date);
             race.Time = ParseTime(jr.Time);
@@ -57,9 +59,9 @@ public class IngestionService(F1DbContext db, JolpicaClient jolpica, ILogger<Ing
             racesUpserted++;
         }
 
-        await db.SaveChangesAsync(ct);   // races now have their generated Ids
+        await db.SaveChangesAsync(ct); // races now have their generated Ids
 
-        // --- Results, only for rounds that have already happened ---
+// --- Results, only for rounds that have already happened ---
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var pastRounds = races.Values.Where(r => r.Date <= today).OrderBy(r => r.Round).ToList();
 
@@ -76,10 +78,10 @@ public class IngestionService(F1DbContext db, JolpicaClient jolpica, ILogger<Ing
 
             var jResults = raceData?.Results;
             if (jResults is null || jResults.Count == 0)
-                continue;   // round hasn't been classified yet
+                continue;
 
             var existing = await db.Results.Where(r => r.RaceId == race.Id)
-                                           .ToDictionaryAsync(r => r.DriverId, ct);
+                .ToDictionaryAsync(r => r.DriverId, ct);
 
             foreach (var jres in jResults)
             {
@@ -90,6 +92,7 @@ public class IngestionService(F1DbContext db, JolpicaClient jolpica, ILogger<Ing
                     drivers[driver.DriverId] = driver;
                     db.Drivers.Add(driver);
                 }
+
                 driver.Code = jd.Code;
                 driver.GivenName = jd.GivenName;
                 driver.FamilyName = jd.FamilyName;
@@ -102,6 +105,7 @@ public class IngestionService(F1DbContext db, JolpicaClient jolpica, ILogger<Ing
                     constructors[constructor.ConstructorId] = constructor;
                     db.Constructors.Add(constructor);
                 }
+
                 constructor.Name = jc.Name;
                 constructor.Nationality = jc.Nationality;
 
@@ -110,6 +114,7 @@ public class IngestionService(F1DbContext db, JolpicaClient jolpica, ILogger<Ing
                     result = new Result { RaceId = race.Id, DriverId = jd.DriverId };
                     db.Results.Add(result);
                 }
+
                 result.ConstructorId = jc.ConstructorId;
                 result.Grid = ParseInt(jres.Grid);
                 result.Position = ParseInt(jres.Position);
@@ -127,10 +132,92 @@ public class IngestionService(F1DbContext db, JolpicaClient jolpica, ILogger<Ing
             logger.LogInformation("Round {Round}: {Count} results", race.Round, jResults.Count);
         }
 
-        logger.LogInformation("Season {Year} done: {Races} races, {Rounds} rounds, {Results} results",
-            year, racesUpserted, roundsIngested, resultsUpserted);
+        // --- Driver standings snapshot (ONCE, after all rounds) ---
+        var standingsUpserted = 0;
+        var standingsList = await jolpica.GetDriverStandingsAsync(year, ct);
+        await Task.Delay(CallDelay, ct);
 
-        return new IngestionResult(year, racesUpserted, roundsIngested, resultsUpserted);
+        if (standingsList is not null)
+        {
+            var existingStandings = await db.DriverStandings.Where(s => s.Year == year)
+                .ToDictionaryAsync(s => s.DriverId, ct);
+            foreach (var js in standingsList.DriverStandings)
+            {
+                var jd = js.Driver;
+                if (!drivers.TryGetValue(jd.DriverId, out var driver))
+                {
+                    driver = new Driver { DriverId = jd.DriverId };
+                    drivers[driver.DriverId] = driver;
+                    db.Drivers.Add(driver);
+                }
+
+                driver.Code = jd.Code;
+                driver.GivenName = jd.GivenName;
+                driver.FamilyName = jd.FamilyName;
+                driver.Nationality = jd.Nationality;
+
+                var jc = js.Constructors.LastOrDefault();
+                if (jc is not null && !constructors.ContainsKey(jc.ConstructorId))
+                {
+                    var c = new Constructor
+                        { ConstructorId = jc.ConstructorId, Name = jc.Name, Nationality = jc.Nationality };
+                    constructors[c.ConstructorId] = c;
+                    db.Constructors.Add(c);
+                }
+
+                if (!existingStandings.TryGetValue(jd.DriverId, out var standing))
+                {
+                    standing = new DriverStanding { Year = year, DriverId = jd.DriverId };
+                    db.DriverStandings.Add(standing);
+                }
+
+                standing.Position = ParseInt(js.Position) ?? 0;
+                standing.Points = ParseDecimal(js.Points);
+                standing.Wins = ParseInt(js.Wins) ?? 0;
+                standing.ConstructorId = jc?.ConstructorId;
+                standingsUpserted++;
+            }
+
+            await db.SaveChangesAsync(ct);
+        }
+        
+        // --- Constructor standings snapshot ---
+        var constructorStandings = await jolpica.GetConstructorStandingsAsync(year, ct);
+        await Task.Delay(CallDelay, ct);
+
+        if (constructorStandings is not null)
+        {
+            var existingCs = await db.ConstructorStandings.Where(s => s.Year == year)
+                .ToDictionaryAsync(s => s.ConstructorId, ct);
+            foreach (var jcs in constructorStandings.ConstructorStandings)
+            {
+                var jc = jcs.Constructor;
+                if (!constructors.TryGetValue(jc.ConstructorId, out var constructor))
+                {
+                    constructor = new Constructor { ConstructorId = jc.ConstructorId };
+                    constructors[constructor.ConstructorId] = constructor;
+                    db.Constructors.Add(constructor);
+                }
+                constructor.Name = jc.Name;
+                constructor.Nationality = jc.Nationality;
+
+                if (!existingCs.TryGetValue(jc.ConstructorId, out var standing))
+                {
+                    standing = new ConstructorStanding { Year = year, ConstructorId = jc.ConstructorId };
+                    db.ConstructorStandings.Add(standing);
+                }
+                standing.Position = ParseInt(jcs.Position) ?? 0;
+                standing.Points = ParseDecimal(jcs.Points);
+                standing.Wins = ParseInt(jcs.Wins) ?? 0;
+            }
+            await db.SaveChangesAsync(ct);
+        }
+
+        logger.LogInformation(
+            "Season {Year} done: {Races} races, {Rounds} rounds, {Results} results, {Standings} standings",
+            year, racesUpserted, roundsIngested, resultsUpserted, standingsUpserted);
+
+        return new IngestionResult(year, racesUpserted, roundsIngested, resultsUpserted, standingsUpserted);
     }
 
     static int? ParseInt(string? s) =>

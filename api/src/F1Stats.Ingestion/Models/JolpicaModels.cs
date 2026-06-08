@@ -68,6 +68,7 @@ public class JolpicaDriver
     [JsonPropertyName("givenName")] public string GivenName { get; set; } = "";
     [JsonPropertyName("familyName")] public string FamilyName { get; set; } = "";
     [JsonPropertyName("nationality")] public string? Nationality { get; set; }
+    [JsonPropertyName("ConstructorStandings")] public List<JolpicaConstructorStanding> ConstructorStandings { get; set; } = new();
 }
 
 public class JolpicaConstructor
@@ -85,4 +86,38 @@ public class JolpicaTime
 public class JolpicaFastestLap
 {
     [JsonPropertyName("Time")] public JolpicaTime? Time { get; set; }
+}
+
+public class StandingsResponse
+{
+    [JsonPropertyName("MRData")] public StandingsMRData MRData { get; set; } = new();
+}
+public class StandingsMRData
+{
+    [JsonPropertyName("StandingsTable")] public StandingsTable StandingsTable { get; set; } = new();
+}
+public class StandingsTable
+{
+    [JsonPropertyName("StandingsLists")] public List<StandingsList> StandingsLists { get; set; } = new();
+}
+public class StandingsList
+{
+    [JsonPropertyName("DriverStandings")] public List<JolpicaDriverStanding> DriverStandings { get; set; } = new();
+    [JsonPropertyName("ConstructorStandings")] public List<JolpicaConstructorStanding> ConstructorStandings { get; set; } = new();
+}
+public class JolpicaDriverStanding
+{
+    [JsonPropertyName("position")] public string? Position { get; set; }
+    [JsonPropertyName("points")] public string Points { get; set; } = "0";
+    [JsonPropertyName("wins")] public string Wins { get; set; } = "0";
+    [JsonPropertyName("Driver")] public JolpicaDriver Driver { get; set; } = new();
+    [JsonPropertyName("Constructors")] public List<JolpicaConstructor> Constructors { get; set; } = new();
+}
+
+public class JolpicaConstructorStanding
+{
+    [JsonPropertyName("position")] public string? Position { get; set; }
+    [JsonPropertyName("points")] public string Points { get; set; } = "0";
+    [JsonPropertyName("wins")] public string Wins { get; set; } = "0";
+    [JsonPropertyName("Constructor")] public JolpicaConstructor Constructor { get; set; } = new();
 }

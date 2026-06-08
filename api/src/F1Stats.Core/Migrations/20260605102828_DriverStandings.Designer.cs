@@ -3,6 +3,7 @@ using System;
 using F1Stats.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace F1Stats.Core.Migrations
 {
     [DbContext(typeof(F1DbContext))]
-    partial class F1DbContextModelSnapshot : ModelSnapshot
+    [Migration("20260605102828_DriverStandings")]
+    partial class DriverStandings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -63,40 +66,6 @@ namespace F1Stats.Core.Migrations
                     b.HasKey("ConstructorId");
 
                     b.ToTable("Constructors");
-                });
-
-            modelBuilder.Entity("F1Stats.Core.Entities.ConstructorStanding", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ConstructorId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<decimal>("Points")
-                        .HasColumnType("numeric");
-
-                    b.Property<int>("Position")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Wins")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Year")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ConstructorId");
-
-                    b.HasIndex("Year", "ConstructorId")
-                        .IsUnique();
-
-                    b.ToTable("ConstructorStandings");
                 });
 
             modelBuilder.Entity("F1Stats.Core.Entities.Driver", b =>
@@ -268,25 +237,6 @@ namespace F1Stats.Core.Migrations
                     b.HasKey("Year");
 
                     b.ToTable("Seasons");
-                });
-
-            modelBuilder.Entity("F1Stats.Core.Entities.ConstructorStanding", b =>
-                {
-                    b.HasOne("F1Stats.Core.Entities.Constructor", "Constructor")
-                        .WithMany()
-                        .HasForeignKey("ConstructorId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("F1Stats.Core.Entities.Season", "Season")
-                        .WithMany()
-                        .HasForeignKey("Year")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Constructor");
-
-                    b.Navigation("Season");
                 });
 
             modelBuilder.Entity("F1Stats.Core.Entities.DriverStanding", b =>

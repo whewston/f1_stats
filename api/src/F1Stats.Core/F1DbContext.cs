@@ -11,6 +11,8 @@ public class F1DbContext(DbContextOptions<F1DbContext> options) : DbContext(opti
     public DbSet<Driver> Drivers => Set<Driver>();
     public DbSet<Constructor> Constructors => Set<Constructor>();
     public DbSet<Result> Results => Set<Result>();
+    public DbSet<DriverStanding> DriverStandings => Set<DriverStanding>();
+    public DbSet<ConstructorStanding> ConstructorStandings => Set<ConstructorStanding>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -34,6 +36,23 @@ public class F1DbContext(DbContextOptions<F1DbContext> options) : DbContext(opti
             e.HasOne(r => r.Race).WithMany(ra => ra.Results).HasForeignKey(r => r.RaceId);
             e.HasOne(r => r.Driver).WithMany(d => d.Results).HasForeignKey(r => r.DriverId);
             e.HasOne(r => r.Constructor).WithMany(c => c.Results).HasForeignKey(r => r.ConstructorId);
+        });
+        
+        b.Entity<DriverStanding>(e =>
+        {
+            e.HasKey(s => s.Id);
+            e.HasIndex(s => new { s.Year, s.DriverId }).IsUnique();
+            e.HasOne(s => s.Season).WithMany().HasForeignKey(s => s.Year);
+            e.HasOne(s => s.Driver).WithMany().HasForeignKey(s => s.DriverId);
+            e.HasOne(s => s.Constructor).WithMany().HasForeignKey(s => s.ConstructorId);
+        });
+        
+        b.Entity<ConstructorStanding>(e =>
+        {
+            e.HasKey(s => s.Id);
+            e.HasIndex(s => new { s.Year, s.ConstructorId }).IsUnique();
+            e.HasOne(s => s.Season).WithMany().HasForeignKey(s => s.Year);
+            e.HasOne(s => s.Constructor).WithMany().HasForeignKey(s => s.ConstructorId);
         });
     }
 }

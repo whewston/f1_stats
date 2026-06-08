@@ -2,6 +2,7 @@ using F1Stats.Api.Endpoints;
 using F1Stats.Core;
 using F1Stats.Ingestion;
 using Microsoft.EntityFrameworkCore;
+using F1Stats.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,7 @@ builder.Services.AddDbContext<F1DbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 builder.Services.AddJolpicaClient();
 builder.Services.AddScoped<IngestionService>();
+builder.Services.AddScoped<StatsService>(); 
 
 var app = builder.Build();
 

@@ -19,4 +19,15 @@ public class JolpicaClient(HttpClient http)
         var data = await http.GetFromJsonAsync<JolpicaResponse>($"{year}/{round}/results.json?limit=100", ct);
         return data?.MRData.RaceTable.Races.FirstOrDefault();
     }
+    
+    public async Task<StandingsList?> GetDriverStandingsAsync(int year, CancellationToken ct = default)
+    {
+        var data = await http.GetFromJsonAsync<StandingsResponse>($"{year}/driverstandings.json?limit=100", ct);
+        return data?.MRData.StandingsTable.StandingsLists.FirstOrDefault();
+    }
+    public async Task<StandingsList?> GetConstructorStandingsAsync(int year, CancellationToken ct = default)
+    {
+        var data = await http.GetFromJsonAsync<StandingsResponse>($"{year}/constructorstandings.json?limit=100", ct);
+        return data?.MRData.StandingsTable.StandingsLists.FirstOrDefault();
+    }
 }

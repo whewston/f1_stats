@@ -81,7 +81,8 @@ public class StatsService(F1DbContext db)
         var race = await db.Races
             .Where(r => r.Year == year && r.Round == round)
             .Select(r => new { r.Year, r.Round, r.RaceName, r.Date, r.Time, r.CircuitId,
-                CircuitName = r.Circuit.Name, r.Circuit.Country, r.Circuit.Locality })
+                CircuitName = r.Circuit.Name, r.Circuit.Country, r.Circuit.Locality,
+                r.Circuit.Latitude, r.Circuit.Longitude })  
             .FirstOrDefaultAsync(ct);
         if (race is null) return null;
 
@@ -118,6 +119,7 @@ public class StatsService(F1DbContext db)
         return new RacePreviewDto(
             race.Year, race.Round, race.RaceName, race.Date, race.Time,
             race.CircuitId, race.CircuitName, race.Country, race.Locality,
+            race.Latitude, race.Longitude,
             topWinners, pastEditions, last?.Year, last?.Round);
     }
 }

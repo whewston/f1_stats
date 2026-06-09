@@ -43,7 +43,7 @@ export default function Home() {
         <div className="dashboard">
             <div className="dashboard__main">
                 {showNext ? (
-                    <Link to={`/seasons/${next!.season}/races/${next!.round}/preview`} className="next rise">
+                    <Link to={`/seasons/${next!.season}/races/${next!.round}`} className="next rise">
                         <div className="next__label">Next race · Round {next!.round}</div>
                         <div className="next__name">{next!.raceName}</div>
                         <div className="next__sub"><Flag country={next!.country} />{next!.circuitName}{next!.country ? `, ${next!.country}` : ''}</div>                        <div className="next__meta">

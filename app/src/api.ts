@@ -66,7 +66,7 @@ export interface RacePreview {
     year: number; round: number; raceName: string; date: string; time: string | null
     circuitId: string; circuitName: string; country: string | null; locality: string | null
     topWinners: CircuitWin[]; pastEditions: PastEdition[]
-    lastEditionYear: number | null; lastEditionRound: number | null
+    lastEditionYear: number | null; lastEditionRound: number | null; latitude: number | null; longitude: number | null
 }
 
 

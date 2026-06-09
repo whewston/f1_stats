@@ -36,6 +36,7 @@ public record PastEditionDto(int Year, int Round, string? WinnerDriverId, string
 public record RacePreviewDto(
     int Year, int Round, string RaceName, DateOnly Date, TimeOnly? Time,
     string CircuitId, string CircuitName, string? Country, string? Locality,
+    double? Latitude, double? Longitude,
     IReadOnlyList<CircuitWinDto> TopWinners,
     IReadOnlyList<PastEditionDto> PastEditions,
     int? LastEditionYear, int? LastEditionRound);

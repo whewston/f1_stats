@@ -36,22 +36,25 @@ public static class F1Endpoints
             var race = await db.Races
                 .Where(r => r.Year == year && r.Round == round)
                 .Select(r => new RaceResultsDto(
-                    r.Year, r.Round, r.RaceName, r.Date, r.Circuit.Name,
+                    r.Year, r.Round, r.RaceName, r.Date, r.Circuit.Name, r.Circuit.Country,
                     r.Results
-                        .OrderBy(res => res.Position == null)   // classified finishers first
-                        .ThenBy(res => res.Position)            // then by finishing position
+                        .OrderBy(res => res.Position == null)
+                        .ThenBy(res => res.Position)
                         .Select(res => new ResultRowDto(
                             res.Position,
                             res.PositionText,
+                            res.DriverId,
                             res.Driver.GivenName + " " + res.Driver.FamilyName,
                             res.Driver.Code,
+                            res.ConstructorId,
                             res.Constructor.Name,
                             res.Grid,
                             res.Points,
                             res.Laps,
                             res.Status,
                             res.RaceTime,
-                            res.FastestLapTime))
+                            res.FastestLapTime,
+                            res.Driver.Nationality))
                         .ToList()))
                 .FirstOrDefaultAsync();
 
@@ -81,11 +84,14 @@ public static class F1Endpoints
                 .OrderBy(s => s.Position)
                 .Select(s => new DriverStandingDto(
                     s.Position,
+                    s.DriverId,
                     s.Driver.GivenName + " " + s.Driver.FamilyName,
                     s.Driver.Code,
+                    s.ConstructorId,
                     s.Constructor != null ? s.Constructor.Name : null,
                     s.Points,
-                    s.Wins))
+                    s.Wins,
+                    s.Driver.Nationality))
                 .ToListAsync();
 
             return standings.Count == 0 ? Results.NotFound() : Results.Ok(standings);
@@ -104,6 +110,24 @@ public static class F1Endpoints
             var profile = await stats.GetConstructorAsync(constructorId, ct);
             return profile is null ? Results.NotFound() : Results.Ok(profile);
         }).WithName("GetConstructor");
+        
+        // F12 — constructors' standings
+        api.MapGet("/seasons/{year:int}/standings/constructors", async (int year, F1DbContext db) =>
+        {
+            var standings = await db.ConstructorStandings
+                .Where(s => s.Year == year)
+                .OrderBy(s => s.Position)
+                .Select(s => new ConstructorStandingDto(
+                    s.Position, s.ConstructorId, s.Constructor.Name, s.Constructor.Nationality, s.Points, s.Wins))
+                .ToListAsync();
+            return standings.Count == 0 ? Results.NotFound() : Results.Ok(standings);
+        }).WithName("GetConstructorStandings");
+        
+        api.MapGet("/seasons/{year:int}/races/{round:int}/preview", async (int year, int round, StatsService stats, CancellationToken ct) =>
+        {
+            var preview = await stats.GetRacePreviewAsync(year, round, ct);
+            return preview is null ? Results.NotFound() : Results.Ok(preview);
+        }).WithName("GetRacePreview");
 
         return api;
     }

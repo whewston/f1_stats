@@ -1,6 +1,9 @@
 ﻿import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { api, type RaceResults as RaceResultsType } from '../api'
+import { teamColor } from '../teamColors'
+import { Pos } from '../components/Pos'
+import { Flag } from "../components/Flag"
 
 export default function RaceResults() {
     const { year, round } = useParams()
@@ -12,28 +15,33 @@ export default function RaceResults() {
         api.results(Number(year), Number(round)).then(setData).finally(() => setLoading(false))
     }, [year, round])
 
-    if (loading) return <p>Loading…</p>
-    if (!data) return <p>No results found.</p>
+    if (loading) return <p className="empty">Loading…</p>
+    if (!data) return <p className="empty">No results found.</p>
 
     return (
         <section>
-            <h2>{data.raceName}</h2>
-            <p style={{ color: '#555' }}>{data.circuitName} · {data.date}</p>
-            {data.results.length === 0 ? <p>No results yet — this race hasn’t run.</p> : (
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead><tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
-                        <th>Pos</th><th>Driver</th><th>Constructor</th><th>Grid</th><th>Pts</th><th>Status</th>
-                    </tr></thead>
-                    <tbody>
-                    {data.results.map(r => (
-                        <tr key={r.driver} style={{ borderBottom: '1px solid #eee' }}>
-                            <td>{r.positionText}</td><td>{r.driver}</td><td>{r.constructor}</td>
-                            <td>{r.grid ?? '—'}</td><td>{r.points}</td><td>{r.status}</td>
-                        </tr>
-                    ))}
-                    </tbody>
-                </table>
-            )}
+            <div className="crumb"><Link to={`/seasons/${year}`}>{year}</Link> · Round {data.round}</div>
+            <h1 className="page-title"><Flag country={data.country} />{data.raceName}</h1>
+            <p className="muted">{data.circuitName} · {data.date}</p>
+            <div className="card" style={{ marginTop: '1.1rem' }}>
+                <div className="card__body" style={{ padding: '.3rem .6rem' }}>
+                    {data.results.length === 0 ? <div className="empty">No results yet — this race hasn’t run.</div> : (
+                        <table className="table">
+                            <thead><tr><th>Pos</th><th>Driver</th><th>Team</th><th className="num">Grid</th><th className="num">Pts</th><th>Status</th></tr></thead>
+                            <tbody>
+                            {data.results.map(r => (
+                                <tr key={r.driverId}>
+                                    <td><Pos n={r.position} text={r.positionText} /></td>
+                                    <td><Flag nationality={r.nationality} /><Link to={`/drivers/${r.driverId}`}>{r.driver}</Link><span className="code">{r.code}</span></td>                                    <td><span className="dot" style={{ background: teamColor(r.constructorId) }} /><Link to={`/constructors/${r.constructorId}`}>{r.constructor}</Link></td>
+                                    <td className="num">{r.grid ?? '—'}</td><td className="num">{r.points}</td>
+                                    <td className="muted">{r.status}</td>
+                                </tr>
+                            ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+            </div>
         </section>
     )
 }

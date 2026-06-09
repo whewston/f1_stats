@@ -75,4 +75,49 @@ public class StatsService(F1DbContext db)
 
         return new ConstructorProfileDto(constructor.ConstructorId, constructor.Name, constructor.Nationality, allTime, seasons);
     }
+    
+    public async Task<RacePreviewDto?> GetRacePreviewAsync(int year, int round, CancellationToken ct = default)
+    {
+        var race = await db.Races
+            .Where(r => r.Year == year && r.Round == round)
+            .Select(r => new { r.Year, r.Round, r.RaceName, r.Date, r.Time, r.CircuitId,
+                CircuitName = r.Circuit.Name, r.Circuit.Country, r.Circuit.Locality })
+            .FirstOrDefaultAsync(ct);
+        if (race is null) return null;
+
+        // every earlier race at this circuit (most recent first)
+        var pastRaces = await db.Races
+            .Where(r => r.CircuitId == race.CircuitId && r.Date < race.Date)
+            .OrderByDescending(r => r.Date)
+            .Select(r => new { r.Id, r.Year, r.Round })
+            .ToListAsync(ct);
+        var pastIds = pastRaces.Select(r => r.Id).ToList();
+
+        var winners = await db.Results
+            .Where(r => pastIds.Contains(r.RaceId) && r.Position == 1)
+            .Select(r => new { r.RaceId, r.DriverId,
+                Driver = r.Driver.GivenName + " " + r.Driver.FamilyName,
+                Constructor = r.Constructor.Name })
+            .ToListAsync(ct);
+        var winnerByRace = winners.ToDictionary(w => w.RaceId);
+
+        var pastEditions = pastRaces.Select(r =>
+        {
+            winnerByRace.TryGetValue(r.Id, out var w);
+            return new PastEditionDto(r.Year, r.Round, w?.DriverId, w?.Driver, w?.Constructor);
+        }).ToList();
+
+        var topWinners = winners
+            .GroupBy(w => new { w.DriverId, w.Driver })
+            .Select(g => new CircuitWinDto(g.Key.DriverId, g.Key.Driver, g.Count()))
+            .OrderByDescending(c => c.Wins).ThenBy(c => c.Driver)
+            .Take(6).ToList();
+
+        var last = pastRaces.FirstOrDefault();
+
+        return new RacePreviewDto(
+            race.Year, race.Round, race.RaceName, race.Date, race.Time,
+            race.CircuitId, race.CircuitName, race.Country, race.Locality,
+            topWinners, pastEditions, last?.Year, last?.Round);
+    }
 }

@@ -1,13 +1,29 @@
 import { Link, Outlet } from 'react-router-dom'
+import { YearProvider, useYear } from './YearContext'
+
+function TopbarControls() {
+    const { year, setYear, seasons } = useYear()
+    return (
+        <>
+            <nav className="nav"><Link to={`/seasons/${year}`}>Races</Link></nav>
+            <span className="spacer" />
+            <select className="year-select" value={year} onChange={e => setYear(Number(e.target.value))}>
+                {seasons.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+        </>
+    )
+}
 
 export default function App() {
-  return (
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '1rem', fontFamily: 'system-ui, sans-serif' }}>
-        <header style={{ display: 'flex', gap: '1rem', alignItems: 'baseline', marginBottom: '1.5rem' }}>
-          <Link to="/" style={{ fontWeight: 700, fontSize: '1.25rem', textDecoration: 'none' }}>🏁 F1 Stats</Link>
-          <Link to="/seasons/2026">2026 races</Link>
-        </header>
-        <Outlet />
-      </div>
-  )
+    return (
+        <YearProvider>
+            <header className="topbar">
+                <div className="topbar__inner">
+                    <Link to="/" className="wordmark">F1 Stats</Link>
+                    <TopbarControls />
+                </div>
+            </header>
+            <main className="container"><Outlet /></main>
+        </YearProvider>
+    )
 }

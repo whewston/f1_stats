@@ -1,10 +1,11 @@
 ﻿import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { api, type RacePreview, type RaceResults } from '../api'
+import { api, type RacePreview, type RaceResults, type RacePrediction } from '../api'
 import { teamColor } from '../teamColors'
 import { Pos } from '../components/Pos'
 import { Flag } from '../components/Flag'
 import { TrackMap } from '../components/TrackMap'
+
 
 export default function RacePage() {
     const { year, round } = useParams()
@@ -12,21 +13,23 @@ export default function RacePage() {
     const [own, setOwn] = useState<RaceResults | null>(null)        // this race's results
     const [lastEd, setLastEd] = useState<RaceResults | null>(null)  // previous edition (future mode)
     const [loading, setLoading] = useState(true)
+    const [prediction, setPrediction] = useState<RacePrediction | null>(null)
 
     useEffect(() => {
         let active = true
         setLoading(true)
         ;(async () => {
-            const [p, o] = await Promise.all([
+            const [p, o, pred] = await Promise.all([
                 api.preview(Number(year), Number(round)),
                 api.results(Number(year), Number(round)),
+                api.prediction(Number(year), Number(round)),
             ])
             let last: RaceResults | null = null
             const ran = !!o && o.results.length > 0
             if (!ran && p?.lastEditionYear && p.lastEditionRound)
                 last = await api.results(p.lastEditionYear, p.lastEditionRound)
             if (!active) return
-            setPreview(p); setOwn(o); setLastEd(last); setLoading(false)
+            setPreview(p); setOwn(o); setLastEd(last); setPrediction(pred); setLoading(false)
         })()
         return () => { active = false }
     }, [year, round])
@@ -50,6 +53,37 @@ export default function RacePage() {
 
             <div className="dashboard" style={{ marginTop: '1.25rem' }}>
                 <div className="dashboard__main">
+
+                    {!hasRun && (
+                        <div className="card rise">
+                            <div className="card__head">
+                                <span className="card__title">Predicted result</span>
+                                {prediction && <span className="muted" style={{ fontFamily: 'var(--mono)', fontSize: '.72rem' }}>{prediction.modelVersion}</span>}
+                            </div>
+                            <div className="card__body" style={{ padding: prediction ? '.3rem .6rem' : '1.1rem' }}>
+                                {!prediction ? (
+                                    <div className="empty">No prediction published yet.</div>
+                                ) : (
+                                    <table className="table">
+                                        <thead><tr><th>Pos</th><th>Driver</th><th>Team</th><th className="num">Win %</th></tr></thead>
+                                        <tbody>
+                                        {prediction.rows.map(r => (
+                                            <tr key={r.driverId}>
+                                                <td><Pos n={r.predictedPosition} text={String(r.predictedPosition)} /></td>
+                                                <td><Flag nationality={r.nationality} /><Link to={`/drivers/${r.driverId}`}>{r.driver}</Link><span className="code">{r.code}</span></td>
+                                                <td>{r.constructorId
+                                                    ? <><span className="dot" style={{ background: teamColor(r.constructorId) }} /><Link to={`/constructors/${r.constructorId}`}>{r.constructor}</Link></>
+                                                    : <span className="muted">—</span>}</td>
+                                                <td className="num">{r.winProbability != null ? `${(r.winProbability * 100).toFixed(0)}%` : '—'}</td>
+                                            </tr>
+                                        ))}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                    
                     {hasRun ? (
                         <div className="card rise">
                             <div className="card__head"><span className="card__title">Result</span></div>

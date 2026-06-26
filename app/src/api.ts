@@ -69,6 +69,16 @@ export interface RacePreview {
     lastEditionYear: number | null; lastEditionRound: number | null; latitude: number | null; longitude: number | null
 }
 
+export interface PredictionRow {
+    predictedPosition: number; driverId: string; driver: string; code: string | null
+    nationality: string | null; constructorId: string | null; constructor: string | null
+    winProbability: number | null
+}
+export interface RacePrediction {
+    year: number; round: number; modelVersion: string; generatedAt: string
+    rows: PredictionRow[]
+}
+
 
 export const api = {
     seasons: () => getJson<number[]>('/api/seasons'),
@@ -80,4 +90,5 @@ export const api = {
     constructor: (id: string) => getJson<ConstructorProfile>(`/api/constructors/${id}`),
     constructorStandings: (year: number) => getJson<ConstructorStanding[]>(`/api/seasons/${year}/standings/constructors`),
     preview: (year: number, round: number) => getJson<RacePreview>(`/api/seasons/${year}/races/${round}/preview`),
+    prediction: (year: number, round: number) => getJson<RacePrediction>(`/api/seasons/${year}/races/${round}/prediction`),
 }

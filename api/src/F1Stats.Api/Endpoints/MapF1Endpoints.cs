@@ -128,6 +128,40 @@ public static class F1Endpoints
             var preview = await stats.GetRacePreviewAsync(year, round, ct);
             return preview is null ? Results.NotFound() : Results.Ok(preview);
         }).WithName("GetRacePreview");
+        
+        // Predicted result for a race (public)
+        api.MapGet("/seasons/{year:int}/races/{round:int}/prediction", async (int year, int round, F1DbContext db) =>
+        {
+            var preds = await db.Predictions
+                .Where(p => p.Year == year && p.Round == round)
+                .OrderBy(p => p.PredictedPosition)
+                .Select(p => new {
+                    p.PredictedPosition, p.DriverId,
+                    Driver = p.Driver.GivenName + " " + p.Driver.FamilyName,
+                    p.Driver.Code, p.Driver.Nationality, p.WinProbability,
+                    p.ModelVersion, p.GeneratedAt })
+                .ToListAsync();
+
+            if (preds.Count == 0) return Results.NotFound();
+
+            // derive each driver's current team for this season (site data, not model data)
+            var teams = await db.DriverStandings
+                .Where(s => s.Year == year)
+                .Select(s => new { s.DriverId, s.ConstructorId, Constructor = s.Constructor != null ? s.Constructor.Name : null })
+                .ToListAsync();
+            var teamByDriver = teams.ToDictionary(t => t.DriverId);
+
+            var rows = preds.Select(p =>
+            {
+                teamByDriver.TryGetValue(p.DriverId, out var team);
+                return new PredictionRowDto(
+                    p.PredictedPosition, p.DriverId, p.Driver, p.Code, p.Nationality,
+                    team?.ConstructorId, team?.Constructor, p.WinProbability);
+            }).ToList();
+
+            var first = preds[0];
+            return Results.Ok(new RacePredictionDto(year, round, first.ModelVersion, first.GeneratedAt, rows));
+        }).WithName("GetRacePrediction");
 
         return api;
     }

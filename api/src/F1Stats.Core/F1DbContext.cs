@@ -13,6 +13,7 @@ public class F1DbContext(DbContextOptions<F1DbContext> options) : DbContext(opti
     public DbSet<Result> Results => Set<Result>();
     public DbSet<DriverStanding> DriverStandings => Set<DriverStanding>();
     public DbSet<ConstructorStanding> ConstructorStandings => Set<ConstructorStanding>();
+    public DbSet<Prediction> Predictions => Set<Prediction>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -53,6 +54,13 @@ public class F1DbContext(DbContextOptions<F1DbContext> options) : DbContext(opti
             e.HasIndex(s => new { s.Year, s.ConstructorId }).IsUnique();
             e.HasOne(s => s.Season).WithMany().HasForeignKey(s => s.Year);
             e.HasOne(s => s.Constructor).WithMany().HasForeignKey(s => s.ConstructorId);
+        });
+        
+        b.Entity<Prediction>(e =>
+        {
+            e.HasKey(p => p.Id);
+            e.HasIndex(p => new { p.Year, p.Round, p.DriverId }).IsUnique();
+            e.HasOne(p => p.Driver).WithMany().HasForeignKey(p => p.DriverId);
         });
     }
 }

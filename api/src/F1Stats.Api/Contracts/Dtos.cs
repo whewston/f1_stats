@@ -40,3 +40,16 @@ public record RacePreviewDto(
     IReadOnlyList<CircuitWinDto> TopWinners,
     IReadOnlyList<PastEditionDto> PastEditions,
     int? LastEditionYear, int? LastEditionRound);
+    
+// --- Prediction read side ---
+public record PredictionRowDto(
+    int PredictedPosition, string DriverId, string Driver, string? Code,
+    string? Nationality, string? ConstructorId, string? Constructor, double? WinProbability);
+
+public record RacePredictionDto(
+    int Year, int Round, string ModelVersion, DateTime GeneratedAt,
+    IReadOnlyList<PredictionRowDto> Rows);
+
+// --- Prediction submit side (request body) ---
+public record PredictionInputDto(string DriverId, int PredictedPosition, double? WinProbability);
+public record PredictionSubmissionDto(string ModelVersion, IReadOnlyList<PredictionInputDto> Predictions);

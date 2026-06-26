@@ -20,6 +20,8 @@ public class StatsService(F1DbContext db)
             .Where(s => s.DriverId == driverId)
             .Select(s => new { s.Year, s.Position, s.Points, s.Wins, Team = s.Constructor != null ? s.Constructor.Name : null })
             .ToListAsync(ct);
+        
+        var completed = await GetCompletedYearsAsync(ct);
 
         var allTime = new StatTotals(
             Races: results.Count,
@@ -27,7 +29,7 @@ public class StatsService(F1DbContext db)
             Podiums: results.Count(r => r.Position is >= 1 and <= 3),
             Poles: results.Count(r => r.Grid == 1),
             Points: standings.Sum(s => s.Points),
-            Championships: standings.Count(s => s.Position == 1),
+            Championships: standings.Count(s => s.Position == 1 && completed.Contains(s.Year)),            
             BestFinish: results.Select(r => r.Position).Min());
 
         var seasons = standings.OrderByDescending(s => s.Year).Select(s =>
@@ -55,14 +57,16 @@ public class StatsService(F1DbContext db)
             .Where(s => s.ConstructorId == constructorId)
             .Select(s => new { s.Year, s.Position, s.Points, s.Wins })
             .ToListAsync(ct);
-
+        
+        var completed = await GetCompletedYearsAsync(ct);
+        
         var allTime = new StatTotals(
             Races: results.Select(r => r.RaceId).Distinct().Count(),   // distinct events (two cars per race)
             Wins: standings.Sum(s => s.Wins),
             Podiums: results.Count(r => r.Position is >= 1 and <= 3),
             Poles: results.Count(r => r.Grid == 1),
             Points: standings.Sum(s => s.Points),
-            Championships: standings.Count(s => s.Position == 1),
+            Championships: standings.Count(s => s.Position == 1 && completed.Contains(s.Year)),            
             BestFinish: results.Select(r => r.Position).Min());
 
         var seasons = standings.OrderByDescending(s => s.Year).Select(s =>
@@ -121,5 +125,17 @@ public class StatsService(F1DbContext db)
             race.CircuitId, race.CircuitName, race.Country, race.Locality,
             race.Latitude, race.Longitude,
             topWinners, pastEditions, last?.Year, last?.Round);
+    }
+    
+    private async Task<HashSet<int>> GetCompletedYearsAsync(CancellationToken ct)
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var years = await db.Races
+            .GroupBy(r => r.Year)
+            .Select(g => new { Year = g.Key, LastDate = g.Max(r => r.Date) })
+            .Where(x => x.LastDate < today)     // every round of that year has happened
+            .Select(x => x.Year)
+            .ToListAsync(ct);
+        return years.ToHashSet();
     }
 }

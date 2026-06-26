@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using F1Stats.Api.Services;
 using F1Stats.Api.Contracts;
 using F1Stats.Core.Entities;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -75,6 +76,7 @@ app.MapPost("/admin/predictions/{year:int}/{round:int}", async (
         {
             Year = year, Round = round, DriverId = p.DriverId,
             PredictedPosition = p.PredictedPosition, WinProbability = p.WinProbability,
+            Reasons = p.Reasons is { Count: > 0 } ? JsonSerializer.Serialize(p.Reasons) : null,
             ModelVersion = body.ModelVersion, GeneratedAt = now,
         });
 

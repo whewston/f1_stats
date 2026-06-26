@@ -2,6 +2,7 @@
 using F1Stats.Core;
 using Microsoft.EntityFrameworkCore;
 using F1Stats.Api.Services;
+using System.Text.Json;
 
 namespace F1Stats.Api.Endpoints;
 
@@ -138,10 +139,9 @@ public static class F1Endpoints
                 .Select(p => new {
                     p.PredictedPosition, p.DriverId,
                     Driver = p.Driver.GivenName + " " + p.Driver.FamilyName,
-                    p.Driver.Code, p.Driver.Nationality, p.WinProbability,
+                    p.Driver.Code, p.Driver.Nationality, p.WinProbability, p.Reasons,
                     p.ModelVersion, p.GeneratedAt })
                 .ToListAsync();
-
             if (preds.Count == 0) return Results.NotFound();
 
             // derive each driver's current team for this season (site data, not model data)
@@ -154,9 +154,12 @@ public static class F1Endpoints
             var rows = preds.Select(p =>
             {
                 teamByDriver.TryGetValue(p.DriverId, out var team);
+                var reasons = string.IsNullOrEmpty(p.Reasons)
+                    ? new List<string>()
+                    : JsonSerializer.Deserialize<List<string>>(p.Reasons) ?? new List<string>();
                 return new PredictionRowDto(
                     p.PredictedPosition, p.DriverId, p.Driver, p.Code, p.Nationality,
-                    team?.ConstructorId, team?.Constructor, p.WinProbability);
+                    team?.ConstructorId, team?.Constructor, p.WinProbability, reasons);
             }).ToList();
 
             var first = preds[0];

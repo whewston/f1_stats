@@ -70,8 +70,14 @@ export default function RacePage() {
                                         {prediction.rows.map(r => (
                                             <tr key={r.driverId}>
                                                 <td><Pos n={r.predictedPosition} text={String(r.predictedPosition)} /></td>
-                                                <td><Flag nationality={r.nationality} /><Link to={`/drivers/${r.driverId}`}>{r.driver}</Link><span className="code">{r.code}</span></td>
-                                                <td>{r.constructorId
+                                                <td>
+                                                    <Flag nationality={r.nationality} /><Link to={`/drivers/${r.driverId}`}>{r.driver}</Link><span className="code">{r.code}</span>
+                                                    {r.reasons.length > 0 && (
+                                                        <div className="muted" style={{ fontSize: '.72rem', marginTop: '.15rem', lineHeight: 1.35 }}>
+                                                            {r.reasons.join(' · ')}
+                                                        </div>
+                                                    )}
+                                                </td>                                                <td>{r.constructorId
                                                     ? <><span className="dot" style={{ background: teamColor(r.constructorId) }} /><Link to={`/constructors/${r.constructorId}`}>{r.constructor}</Link></>
                                                     : <span className="muted">—</span>}</td>
                                                 <td className="num">{r.winProbability != null ? `${(r.winProbability * 100).toFixed(0)}%` : '—'}</td>

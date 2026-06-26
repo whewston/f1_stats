@@ -72,7 +72,7 @@ export interface RacePreview {
 export interface PredictionRow {
     predictedPosition: number; driverId: string; driver: string; code: string | null
     nationality: string | null; constructorId: string | null; constructor: string | null
-    winProbability: number | null
+    winProbability: number | null; reasons: string[]
 }
 export interface RacePrediction {
     year: number; round: number; modelVersion: string; generatedAt: string

@@ -1,4 +1,5 @@
 ﻿namespace F1Stats.Api.Contracts;
+using System.Text.Json;
 
 public record RaceSummaryDto(
     int Round, string RaceName, DateOnly Date, TimeOnly? Time,
@@ -40,16 +41,19 @@ public record RacePreviewDto(
     IReadOnlyList<CircuitWinDto> TopWinners,
     IReadOnlyList<PastEditionDto> PastEditions,
     int? LastEditionYear, int? LastEditionRound);
-    
+
 // --- Prediction read side ---
 public record PredictionRowDto(
     int PredictedPosition, string DriverId, string Driver, string? Code,
-    string? Nationality, string? ConstructorId, string? Constructor, double? WinProbability);
+    string? Nationality, string? ConstructorId, string? Constructor,
+    double? WinProbability, IReadOnlyList<string> Reasons);
+
+// --- Prediction submit side (request body) ---
+public record PredictionInputDto(
+    string DriverId, int PredictedPosition, double? WinProbability,
+    IReadOnlyList<string>? Reasons);
+public record PredictionSubmissionDto(string ModelVersion, IReadOnlyList<PredictionInputDto> Predictions);
 
 public record RacePredictionDto(
     int Year, int Round, string ModelVersion, DateTime GeneratedAt,
     IReadOnlyList<PredictionRowDto> Rows);
-
-// --- Prediction submit side (request body) ---
-public record PredictionInputDto(string DriverId, int PredictedPosition, double? WinProbability);
-public record PredictionSubmissionDto(string ModelVersion, IReadOnlyList<PredictionInputDto> Predictions);

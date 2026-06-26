@@ -9,6 +9,7 @@ public class Prediction
     public int PredictedPosition { get; set; }
     public double? WinProbability { get; set; }       // optional, 0..1
     public string ModelVersion { get; set; } = default!;
+    public string? Reasons { get; set; }   // JSON array of human-readable factors
     public DateTime GeneratedAt { get; set; }
 
     public Driver Driver { get; set; } = default!;

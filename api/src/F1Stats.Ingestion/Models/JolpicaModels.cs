@@ -30,6 +30,7 @@ public class JolpicaRace
     [JsonPropertyName("time")] public string? Time { get; set; }
     [JsonPropertyName("Circuit")] public JolpicaCircuit Circuit { get; set; } = new();
     [JsonPropertyName("Results")] public List<JolpicaResult>? Results { get; set; }
+    [JsonPropertyName("QualifyingResults")] public List<JolpicaQualifyingResult>? QualifyingResults { get; set; }
 }
 
 public class JolpicaCircuit
@@ -59,6 +60,16 @@ public class JolpicaResult
     [JsonPropertyName("Constructor")] public JolpicaConstructor Constructor { get; set; } = new();
     [JsonPropertyName("Time")] public JolpicaTime? Time { get; set; }
     [JsonPropertyName("FastestLap")] public JolpicaFastestLap? FastestLap { get; set; }
+}
+
+public class JolpicaQualifyingResult
+{
+    [JsonPropertyName("position")] public string? Position { get; set; }
+    [JsonPropertyName("Q1")] public string? Q1 { get; set; }
+    [JsonPropertyName("Q2")] public string? Q2 { get; set; }
+    [JsonPropertyName("Q3")] public string? Q3 { get; set; }
+    [JsonPropertyName("Driver")] public JolpicaDriver Driver { get; set; } = new();
+    [JsonPropertyName("Constructor")] public JolpicaConstructor Constructor { get; set; } = new();
 }
 
 public class JolpicaDriver

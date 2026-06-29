@@ -30,4 +30,11 @@ public class JolpicaClient(HttpClient http)
         var data = await http.GetFromJsonAsync<StandingsResponse>($"{year}/constructorstandings.json?limit=100", ct);
         return data?.MRData.StandingsTable.StandingsLists.FirstOrDefault();
     }
+    
+    // Qualifying for a single round.
+    public async Task<JolpicaRace?> GetRaceQualifyingAsync(int year, int round, CancellationToken ct = default)
+    {
+        var data = await http.GetFromJsonAsync<JolpicaResponse>($"{year}/{round}/qualifying.json?limit=100", ct);
+        return data?.MRData.RaceTable.Races.FirstOrDefault();
+    }
 }

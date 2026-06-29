@@ -131,6 +131,57 @@ public class IngestionService(F1DbContext db, JolpicaClient jolpica, ILogger<Ing
             roundsIngested++;
             logger.LogInformation("Round {Round}: {Count} results", race.Round, jResults.Count);
         }
+        
+        // --- Qualifying, for rounds that have already happened ---
+        foreach (var race in pastRounds)
+        {
+            var qualiData = await jolpica.GetRaceQualifyingAsync(year, race.Round, ct);
+            await Task.Delay(CallDelay, ct);
+
+            var jQuali = qualiData?.QualifyingResults;
+            if (jQuali is null || jQuali.Count == 0)
+                continue;   // some older rounds predate qualifying data
+
+            var existingQ = await db.QualifyingResults.Where(q => q.RaceId == race.Id)
+                                                      .ToDictionaryAsync(q => q.DriverId, ct);
+
+            foreach (var jq in jQuali)
+            {
+                var jd = jq.Driver;
+                if (!drivers.TryGetValue(jd.DriverId, out var driver))
+                {
+                    driver = new Driver { DriverId = jd.DriverId };
+                    drivers[driver.DriverId] = driver;
+                    db.Drivers.Add(driver);
+                }
+                driver.Code = jd.Code;
+                driver.GivenName = jd.GivenName;
+                driver.FamilyName = jd.FamilyName;
+                driver.Nationality = jd.Nationality;
+
+                var jc = jq.Constructor;
+                if (!constructors.TryGetValue(jc.ConstructorId, out var constructor))
+                {
+                    constructor = new Constructor { ConstructorId = jc.ConstructorId };
+                    constructors[constructor.ConstructorId] = constructor;
+                    db.Constructors.Add(constructor);
+                }
+                constructor.Name = jc.Name;
+                constructor.Nationality = jc.Nationality;
+
+                if (!existingQ.TryGetValue(jd.DriverId, out var quali))
+                {
+                    quali = new QualifyingResult { RaceId = race.Id, DriverId = jd.DriverId };
+                    db.QualifyingResults.Add(quali);
+                }
+                quali.ConstructorId = jc.ConstructorId;
+                quali.Position = ParseInt(jq.Position) ?? 0;
+                quali.Q1 = jq.Q1;
+                quali.Q2 = jq.Q2;
+                quali.Q3 = jq.Q3;
+            }
+            await db.SaveChangesAsync(ct);
+        }
 
         // --- Driver standings snapshot (ONCE, after all rounds) ---
         var standingsUpserted = 0;

@@ -165,6 +165,25 @@ public static class F1Endpoints
             var first = preds[0];
             return Results.Ok(new RacePredictionDto(year, round, first.ModelVersion, first.GeneratedAt, rows));
         }).WithName("GetRacePrediction");
+        
+        // Qualifying result for a race (public)
+        api.MapGet("/seasons/{year:int}/races/{round:int}/qualifying", async (int year, int round, F1DbContext db) =>
+        {
+            var race = await db.Races.Where(r => r.Year == year && r.Round == round)
+                .Select(r => new { r.Id }).FirstOrDefaultAsync();
+            if (race is null) return Results.NotFound();
+
+            var rows = await db.QualifyingResults
+                .Where(q => q.RaceId == race.Id)
+                .OrderBy(q => q.Position)
+                .Select(q => new QualifyingRowDto(
+                    q.Position, q.DriverId,
+                    q.Driver.GivenName + " " + q.Driver.FamilyName, q.Driver.Code, q.Driver.Nationality,
+                    q.ConstructorId, q.Constructor.Name, q.Q1, q.Q2, q.Q3))
+                .ToListAsync();
+
+            return rows.Count == 0 ? Results.NotFound() : Results.Ok(new RaceQualifyingDto(year, round, rows));
+        }).WithName("GetRaceQualifying");
 
         return api;
     }

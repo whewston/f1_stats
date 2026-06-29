@@ -57,3 +57,9 @@ public record PredictionSubmissionDto(string ModelVersion, IReadOnlyList<Predict
 public record RacePredictionDto(
     int Year, int Round, string ModelVersion, DateTime GeneratedAt,
     IReadOnlyList<PredictionRowDto> Rows);
+    
+public record QualifyingRowDto(
+    int Position, string DriverId, string Driver, string? Code, string? Nationality,
+    string? ConstructorId, string? Constructor, string? Q1, string? Q2, string? Q3);
+
+public record RaceQualifyingDto(int Year, int Round, IReadOnlyList<QualifyingRowDto> Rows);

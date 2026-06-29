@@ -14,6 +14,7 @@ public class F1DbContext(DbContextOptions<F1DbContext> options) : DbContext(opti
     public DbSet<DriverStanding> DriverStandings => Set<DriverStanding>();
     public DbSet<ConstructorStanding> ConstructorStandings => Set<ConstructorStanding>();
     public DbSet<Prediction> Predictions => Set<Prediction>();
+    public DbSet<QualifyingResult> QualifyingResults => Set<QualifyingResult>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -61,6 +62,15 @@ public class F1DbContext(DbContextOptions<F1DbContext> options) : DbContext(opti
             e.HasKey(p => p.Id);
             e.HasIndex(p => new { p.Year, p.Round, p.DriverId }).IsUnique();
             e.HasOne(p => p.Driver).WithMany().HasForeignKey(p => p.DriverId);
+        });
+        
+        b.Entity<QualifyingResult>(e =>
+        {
+            e.HasKey(q => q.Id);
+            e.HasIndex(q => new { q.RaceId, q.DriverId }).IsUnique();
+            e.HasOne(q => q.Race).WithMany().HasForeignKey(q => q.RaceId);
+            e.HasOne(q => q.Driver).WithMany().HasForeignKey(q => q.DriverId);
+            e.HasOne(q => q.Constructor).WithMany().HasForeignKey(q => q.ConstructorId);
         });
     }
 }

@@ -60,7 +60,11 @@ export default function RacePage() {
                         <div className="card rise">
                             <div className="card__head">
                                 <span className="card__title">Predicted result</span>
-                                {prediction && <span className="muted" style={{ fontFamily: 'var(--mono)', fontSize: '.72rem' }}>{prediction.modelVersion}</span>}
+                                {prediction && (
+                                    <span className="muted" style={{ fontFamily: 'var(--mono)', fontSize: '.72rem' }}>
+                                        {prediction.phase === 'post_qualifying' ? 'after qualifying' : 'before qualifying'} · {prediction.modelVersion}
+                                    </span>
+                                )}
                             </div>
                             <div className="card__body" style={{ padding: prediction ? '.3rem .6rem' : '1.1rem' }}>
                                 {!prediction ? (

@@ -130,11 +130,21 @@ public static class F1Endpoints
             return preview is null ? Results.NotFound() : Results.Ok(preview);
         }).WithName("GetRacePreview");
         
-        // Predicted result for a race (public)
-        api.MapGet("/seasons/{year:int}/races/{round:int}/prediction", async (int year, int round, F1DbContext db) =>
+        api.MapGet("/seasons/{year:int}/races/{round:int}/prediction", async (int year, int round, string? phase, F1DbContext db) =>
         {
-            var preds = await db.Predictions
+            var phasesAvailable = await db.Predictions
                 .Where(p => p.Year == year && p.Round == round)
+                .Select(p => p.Phase).Distinct().ToListAsync();
+            if (phasesAvailable.Count == 0) return Results.NotFound();
+
+            string chosen =
+                (!string.IsNullOrEmpty(phase) && phasesAvailable.Contains(phase)) ? phase!
+                : phasesAvailable.Contains("post_qualifying") ? "post_qualifying"
+                : phasesAvailable.Contains("pre_qualifying") ? "pre_qualifying"
+                : phasesAvailable[0];
+
+            var preds = await db.Predictions
+                .Where(p => p.Year == year && p.Round == round && p.Phase == chosen)
                 .OrderBy(p => p.PredictedPosition)
                 .Select(p => new {
                     p.PredictedPosition, p.DriverId,
@@ -142,9 +152,7 @@ public static class F1Endpoints
                     p.Driver.Code, p.Driver.Nationality, p.WinProbability, p.Reasons,
                     p.ModelVersion, p.GeneratedAt })
                 .ToListAsync();
-            if (preds.Count == 0) return Results.NotFound();
 
-            // derive each driver's current team for this season (site data, not model data)
             var teams = await db.DriverStandings
                 .Where(s => s.Year == year)
                 .Select(s => new { s.DriverId, s.ConstructorId, Constructor = s.Constructor != null ? s.Constructor.Name : null })
@@ -163,7 +171,7 @@ public static class F1Endpoints
             }).ToList();
 
             var first = preds[0];
-            return Results.Ok(new RacePredictionDto(year, round, first.ModelVersion, first.GeneratedAt, rows));
+            return Results.Ok(new RacePredictionDto(year, round, chosen, first.ModelVersion, first.GeneratedAt, rows));
         }).WithName("GetRacePrediction");
         
         // Qualifying result for a race (public)

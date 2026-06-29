@@ -76,7 +76,7 @@ export interface PredictionRow {
 }
 export interface RacePrediction {
     year: number; round: number; modelVersion: string; generatedAt: string
-    rows: PredictionRow[]
+    rows: PredictionRow[]; phase: string 
 }
 
 export interface QualifyingRow {

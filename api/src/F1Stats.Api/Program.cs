@@ -56,6 +56,10 @@ app.MapPost("/admin/predictions/{year:int}/{round:int}", async (
         return Results.Unauthorized();
     }
 
+    var allowedPhases = new[] { "pre_qualifying", "post_qualifying" };
+    if (string.IsNullOrEmpty(body.Phase) || !allowedPhases.Contains(body.Phase))
+        return Results.BadRequest(new { error = "Phase must be 'pre_qualifying' or 'post_qualifying'." });
+
     if (body.Predictions is null || body.Predictions.Count == 0)
         return Results.BadRequest(new { error = "No predictions supplied." });
 
@@ -67,21 +71,23 @@ app.MapPost("/admin/predictions/{year:int}/{round:int}", async (
     if (unknown.Count > 0)
         return Results.BadRequest(new { error = "Unknown driverIds.", unknown });
 
-    var existing = await db.Predictions.Where(p => p.Year == year && p.Round == round).ToListAsync(ct);
+    var existing = await db.Predictions
+        .Where(p => p.Year == year && p.Round == round && p.Phase == body.Phase)
+        .ToListAsync(ct);
     db.Predictions.RemoveRange(existing);
 
     var now = DateTime.UtcNow;
     foreach (var p in body.Predictions)
         db.Predictions.Add(new Prediction
         {
-            Year = year, Round = round, DriverId = p.DriverId,
+            Year = year, Round = round, DriverId = p.DriverId, Phase = body.Phase,
             PredictedPosition = p.PredictedPosition, WinProbability = p.WinProbability,
             Reasons = p.Reasons is { Count: > 0 } ? JsonSerializer.Serialize(p.Reasons) : null,
             ModelVersion = body.ModelVersion, GeneratedAt = now,
         });
 
     await db.SaveChangesAsync(ct);
-    return Results.Ok(new { year, round, count = body.Predictions.Count, modelVersion = body.ModelVersion });
+    return Results.Ok(new { year, round, phase = body.Phase, count = body.Predictions.Count, modelVersion = body.ModelVersion });
 }).WithName("SubmitPredictions");
 
 app.Run();

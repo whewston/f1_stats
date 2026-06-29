@@ -1,13 +1,11 @@
 ﻿"""F1 race-result predictor (offline batch inference).
 
-Pulls features from the public F1 Stats API, ranks the field with a transparent
-weighted baseline, generates human-readable reasons for each prediction, and
-submits the result to the protected admin endpoint.
+Two phases share one contract:
+  - pre_qualifying:  form + championship + circuit history (inherently fuzzy)
+  - post_qualifying: same, but grid position dominates (much sharper)
 
 The model is interpretable by construction: every driver's score is an additive
-blend of a few named factors, so the same numbers that produce the ranking also
-produce the explanation. Swapping in a trained model later only changes
-`build_predictions` — feature gathering and submission stay put.
+blend of named factors, so the numbers that rank a driver also explain them.
 """
 import argparse
 import math
@@ -21,13 +19,12 @@ from dotenv import load_dotenv
 load_dotenv()
 API_BASE = os.environ.get("F1_API_BASE", "http://localhost:8080").rstrip("/")
 ADMIN_KEY = os.environ.get("F1_ADMIN_KEY", "dev-secret")
-MODEL_VERSION = "baseline-v0.1"
-RECENT_WINDOW = 3                 # races of recent form to weigh
+RECENT_WINDOW = 3
 
-# scoring weights (sum to 1.0) — these *are* the model
-W_STRENGTH = 0.40                 # season championship position
-W_FORM     = 0.40                 # recent finishing positions
-W_CIRCUIT  = 0.20                 # past wins at this circuit
+# weight profiles — these *are* the model. grid only exists post-qualifying.
+PRE_WEIGHTS  = {"strength": 0.40, "form": 0.40, "circuit": 0.20, "grid": 0.00}
+POST_WEIGHTS = {"strength": 0.15, "form": 0.20, "circuit": 0.10, "grid": 0.55}
+BETA = 6.0   # softmax sharpness for win probability
 
 
 def get(path):
@@ -53,7 +50,6 @@ def resolve_race(year, rnd):
 
 
 def recent_form(year, upto_round):
-    """driverId -> recent finishing positions, most-recent-first."""
     races = get(f"/api/seasons/{year}/races") or []
     done = sorted((r for r in races if r["round"] < upto_round),
                   key=lambda r: r["round"], reverse=True)
@@ -69,14 +65,33 @@ def recent_form(year, upto_round):
 
 
 def circuit_wins(year, rnd):
-    """driverId -> wins at this circuit, from the preview endpoint."""
     prev = get(f"/api/seasons/{year}/races/{rnd}/preview")
     return {w["driverId"]: w["wins"] for w in (prev or {}).get("topWinners", [])}
 
 
-def reasons_for(x):
-    """Top human-readable factors behind a driver's ranking (XAI)."""
+def qualifying_grid(year, rnd):
+    """driverId -> grid (qualifying) position, or {} if no quali yet."""
+    q = get(f"/api/seasons/{year}/races/{rnd}/qualifying")
+    return {r["driverId"]: r["position"] for r in (q or {}).get("rows", [])}
+
+
+def resolve_phase(arg, year, rnd):
+    if arg == "pre":
+        return "pre_qualifying"
+    if arg == "post":
+        return "post_qualifying"
+    return "post_qualifying" if qualifying_grid(year, rnd) else "pre_qualifying"
+
+
+def reasons_for(x, phase):
     out = []
+    if phase == "post_qualifying":
+        g = x.get("grid")
+        if g == 1:
+            out.append("Starts on pole")
+        elif g:
+            out.append(f"Starts P{g}")
+
     pos = x["champPos"]
     if pos == 1:
         out.append("Leads the championship")
@@ -87,7 +102,7 @@ def reasons_for(x):
     if wh > 0:
         out.append(f"Won here {wh} time{'s' if wh > 1 else ''} before")
 
-    recent = x["recent"]            # most-recent-first
+    recent = x["recent"]
     streak = 0
     for p in recent:
         if p <= 3:
@@ -108,45 +123,52 @@ def reasons_for(x):
     return out[:3]
 
 
-def build_predictions(year, rnd):
+def build_predictions(year, rnd, phase):
     field = get(f"/api/seasons/{year}/standings/drivers")
     if not field:
         sys.exit(f"No standings for {year}; nothing to predict.")
     n = len(field)
     form = recent_form(year, rnd)
     wins_here = circuit_wins(year, rnd)
+    grid = qualifying_grid(year, rnd) if phase == "post_qualifying" else {}
+
+    if phase == "post_qualifying" and not grid:
+        sys.exit("Post-qualifying requested but no qualifying data for this round yet.")
+
+    w = POST_WEIGHTS if phase == "post_qualifying" else PRE_WEIGHTS
 
     scored = []
     for s in field:
         did, pos = s["driverId"], s["position"]
         recent = form.get(did, [])
         f_strength = (n - pos + 1) / n
-        f_form = (mean(21 - p for p in recent) / 20) if recent else 0.5   # neutral if unknown
+        f_form = (mean(21 - p for p in recent) / 20) if recent else 0.5
         wh = wins_here.get(did, 0)
         f_circuit = min(wh, 5) / 5
-        score = W_STRENGTH * f_strength + W_FORM * f_form + W_CIRCUIT * f_circuit
+        g = grid.get(did)
+        f_grid = ((n - g + 1) / n) if g else 0.5
+        score = (w["strength"] * f_strength + w["form"] * f_form
+                 + w["circuit"] * f_circuit + w["grid"] * f_grid)
         scored.append({"driverId": did, "score": score, "champPos": pos,
-                       "recent": recent, "winsHere": wh})
+                       "recent": recent, "winsHere": wh, "grid": g})
 
     scored.sort(key=lambda x: x["score"], reverse=True)
-
-    beta = 6.0                       # softmax sharpness for win probability
-    exps = [math.exp(beta * x["score"]) for x in scored]
+    exps = [math.exp(BETA * x["score"]) for x in scored]
     total = sum(exps) or 1.0
 
     return [{
         "driverId": x["driverId"],
         "predictedPosition": i,
         "winProbability": round(e / total, 4),
-        "reasons": reasons_for(x),
+        "reasons": reasons_for(x, phase),
     } for i, (x, e) in enumerate(zip(scored, exps), start=1)]
 
 
-def submit(year, rnd, predictions):
+def submit(year, rnd, phase, model_version, predictions):
     r = requests.post(
         f"{API_BASE}/admin/predictions/{year}/{rnd}",
         headers={"X-Admin-Key": ADMIN_KEY},
-        json={"modelVersion": MODEL_VERSION, "predictions": predictions},
+        json={"modelVersion": model_version, "phase": phase, "predictions": predictions},
         timeout=20,
     )
     if r.status_code != 200:
@@ -158,12 +180,17 @@ def main():
     ap = argparse.ArgumentParser(description="Predict an F1 race and submit it.")
     ap.add_argument("--year", type=int)
     ap.add_argument("--round", type=int)
+    ap.add_argument("--phase", choices=["auto", "pre", "post"], default="auto",
+                    help="auto picks post if qualifying exists, else pre")
     ap.add_argument("--dry-run", action="store_true", help="print, don't submit")
     args = ap.parse_args()
 
     year, rnd = resolve_race(args.year, args.round)
-    print(f"Predicting {year} round {rnd}  (model {MODEL_VERSION})\n")
-    preds = build_predictions(year, rnd)
+    phase = resolve_phase(args.phase, year, rnd)
+    model_version = f"baseline-{'post' if phase == 'post_qualifying' else 'pre'}-quali-v0.2"
+
+    print(f"Predicting {year} round {rnd}  ({phase}, model {model_version})\n")
+    preds = build_predictions(year, rnd, phase)
 
     for p in preds[:10]:
         why = ("  — " + "; ".join(p["reasons"])) if p["reasons"] else ""
@@ -173,8 +200,8 @@ def main():
     if args.dry_run:
         print("\nDry run — nothing submitted.")
         return
-    res = submit(year, rnd, preds)
-    print(f"\nSubmitted {res['count']} predictions for {year} round {rnd}.")
+    res = submit(year, rnd, phase, model_version, preds)
+    print(f"\nSubmitted {res['count']} predictions ({phase}) for {year} round {rnd}.")
 
 
 if __name__ == "__main__":

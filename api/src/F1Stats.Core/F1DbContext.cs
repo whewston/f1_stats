@@ -60,7 +60,7 @@ public class F1DbContext(DbContextOptions<F1DbContext> options) : DbContext(opti
         b.Entity<Prediction>(e =>
         {
             e.HasKey(p => p.Id);
-            e.HasIndex(p => new { p.Year, p.Round, p.DriverId }).IsUnique();
+            e.HasIndex(p => new { p.Year, p.Round, p.DriverId, p.Phase }).IsUnique();            
             e.HasOne(p => p.Driver).WithMany().HasForeignKey(p => p.DriverId);
         });
         

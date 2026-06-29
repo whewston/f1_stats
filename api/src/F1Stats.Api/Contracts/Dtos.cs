@@ -52,11 +52,12 @@ public record PredictionRowDto(
 public record PredictionInputDto(
     string DriverId, int PredictedPosition, double? WinProbability,
     IReadOnlyList<string>? Reasons);
-public record PredictionSubmissionDto(string ModelVersion, IReadOnlyList<PredictionInputDto> Predictions);
-
 public record RacePredictionDto(
-    int Year, int Round, string ModelVersion, DateTime GeneratedAt,
+    int Year, int Round, string Phase, string ModelVersion, DateTime GeneratedAt,
     IReadOnlyList<PredictionRowDto> Rows);
+
+public record PredictionSubmissionDto(
+    string ModelVersion, string Phase, IReadOnlyList<PredictionInputDto> Predictions);
     
 public record QualifyingRowDto(
     int Position, string DriverId, string Driver, string? Code, string? Nationality,

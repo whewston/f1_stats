@@ -133,7 +133,12 @@ public class IngestionService(F1DbContext db, JolpicaClient jolpica, ILogger<Ing
         }
         
         // --- Qualifying, for rounds that have already happened ---
-        foreach (var race in pastRounds)
+        
+        var qualiRounds = pastRounds.ToList();
+        var upcoming = races.Values.Where(r => r.Date > today).OrderBy(r => r.Date).FirstOrDefault();
+        if (upcoming is not null) qualiRounds.Add(upcoming);
+        
+        foreach (var race in qualiRounds)
         {
             var qualiData = await jolpica.GetRaceQualifyingAsync(year, race.Round, ct);
             await Task.Delay(CallDelay, ct);

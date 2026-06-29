@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { api, type RacePreview, type RaceResults, type RacePrediction } from '../api'
+import { api, type RacePreview, type RaceResults, type RacePrediction, type RaceQualifying } from '../api'
 import { teamColor } from '../teamColors'
 import { Pos } from '../components/Pos'
 import { Flag } from '../components/Flag'
@@ -14,22 +14,24 @@ export default function RacePage() {
     const [lastEd, setLastEd] = useState<RaceResults | null>(null)  // previous edition (future mode)
     const [loading, setLoading] = useState(true)
     const [prediction, setPrediction] = useState<RacePrediction | null>(null)
+    const [quali, setQuali] = useState<RaceQualifying | null>(null)
 
     useEffect(() => {
         let active = true
         setLoading(true)
         ;(async () => {
-            const [p, o, pred] = await Promise.all([
+            const [p, o, pred, q] = await Promise.all([
                 api.preview(Number(year), Number(round)),
                 api.results(Number(year), Number(round)),
                 api.prediction(Number(year), Number(round)),
+                api.qualifying(Number(year), Number(round)),
             ])
             let last: RaceResults | null = null
             const ran = !!o && o.results.length > 0
             if (!ran && p?.lastEditionYear && p.lastEditionRound)
                 last = await api.results(p.lastEditionYear, p.lastEditionRound)
             if (!active) return
-            setPreview(p); setOwn(o); setLastEd(last); setPrediction(pred); setLoading(false)
+            setPreview(p); setOwn(o); setLastEd(last); setPrediction(pred); setQuali(q); setLoading(false)
         })()
         return () => { active = false }
     }, [year, round])
@@ -143,6 +145,31 @@ export default function RacePage() {
                         </div>
                     ) : (
                         <div className="card"><div className="card__body"><div className="empty">No results yet, and no prior edition of this race in the data.</div></div></div>
+                    )}
+
+                    {quali && quali.rows.length > 0 && (
+                        <div className="card rise">
+                            <div className="card__head"><span className="card__title">Qualifying</span></div>
+                            <div className="card__body" style={{ padding: '.3rem .6rem' }}>
+                                <table className="table">
+                                    <thead><tr><th>Pos</th><th>Driver</th><th>Team</th><th className="num">Q1</th><th className="num">Q2</th><th className="num">Q3</th></tr></thead>
+                                    <tbody>
+                                    {quali.rows.map(r => (
+                                        <tr key={r.driverId}>
+                                            <td><Pos n={r.position} text={String(r.position)} /></td>
+                                            <td><Flag nationality={r.nationality} /><Link to={`/drivers/${r.driverId}`}>{r.driver}</Link><span className="code">{r.code}</span></td>
+                                            <td>{r.constructorId
+                                                ? <><span className="dot" style={{ background: teamColor(r.constructorId) }} /><Link to={`/constructors/${r.constructorId}`}>{r.constructor}</Link></>
+                                                : <span className="muted">—</span>}</td>
+                                            <td className="num">{r.q1 ?? '—'}</td>
+                                            <td className="num">{r.q2 ?? '—'}</td>
+                                            <td className="num">{r.q3 ?? '—'}</td>
+                                        </tr>
+                                    ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     )}
                 </div>
 

@@ -21,13 +21,16 @@ public class StatsService(F1DbContext db)
             .Select(s => new { s.Year, s.Position, s.Points, s.Wins, Team = s.Constructor != null ? s.Constructor.Name : null })
             .ToListAsync(ct);
         
+        var poles = await db.QualifyingResults
+            .CountAsync(q => q.DriverId == driverId && q.Position == 1, ct);
+        
         var completed = await GetCompletedYearsAsync(ct);
 
         var allTime = new StatTotals(
             Races: results.Count,
             Wins: standings.Sum(s => s.Wins),
             Podiums: results.Count(r => r.Position is >= 1 and <= 3),
-            Poles: results.Count(r => r.Grid == 1),
+            Poles: poles,            
             Points: standings.Sum(s => s.Points),
             Championships: standings.Count(s => s.Position == 1 && completed.Contains(s.Year)),            
             BestFinish: results.Select(r => r.Position).Min());
@@ -38,6 +41,8 @@ public class StatsService(F1DbContext db)
             return new DriverSeasonStat(s.Year, s.Team, s.Position, s.Points, s.Wins,
                 sr.Count(r => r.Position is >= 1 and <= 3), sr.Count, sr.Select(r => r.Position).Min());
         }).ToList();
+        
+        
 
         return new DriverProfileDto(driver.DriverId, $"{driver.GivenName} {driver.FamilyName}",
             driver.Code, driver.Nationality, allTime, seasons);
@@ -58,13 +63,16 @@ public class StatsService(F1DbContext db)
             .Select(s => new { s.Year, s.Position, s.Points, s.Wins })
             .ToListAsync(ct);
         
+        var poles = await db.QualifyingResults
+            .CountAsync(q => q.ConstructorId == constructorId && q.Position == 1, ct);
+        
         var completed = await GetCompletedYearsAsync(ct);
         
         var allTime = new StatTotals(
             Races: results.Select(r => r.RaceId).Distinct().Count(),   // distinct events (two cars per race)
             Wins: standings.Sum(s => s.Wins),
             Podiums: results.Count(r => r.Position is >= 1 and <= 3),
-            Poles: results.Count(r => r.Grid == 1),
+            Poles: poles,            
             Points: standings.Sum(s => s.Points),
             Championships: standings.Count(s => s.Position == 1 && completed.Contains(s.Year)),            
             BestFinish: results.Select(r => r.Position).Min());

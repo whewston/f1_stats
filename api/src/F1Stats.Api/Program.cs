@@ -16,6 +16,11 @@ builder.Services.AddJolpicaClient();
 builder.Services.AddScoped<IngestionService>();
 builder.Services.AddScoped<StatsService>(); 
 
+builder.Services.AddCors(o => o.AddPolicy("frontend", p => p
+    .WithOrigins("https://f1stats.whewston.co.uk", "http://localhost:5173")
+    .AllowAnyHeader()
+    .AllowAnyMethod()));
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -28,6 +33,8 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+app.UseCors("frontend");
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).WithName("Health");
 

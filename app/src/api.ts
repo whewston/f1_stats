@@ -1,4 +1,13 @@
-﻿export interface RaceSummary {
+﻿const BASE = import.meta.env.VITE_API_BASE ?? ''
+
+async function getJson<T>(url: string): Promise<T | null> {
+  const res = await fetch(`${BASE}${url}`)
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
+  return res.json() as Promise<T>
+}
+
+export interface RaceSummary {
     round: number; raceName: string; date: string; time: string | null
     circuitName: string; country: string | null; locality: string | null
 }

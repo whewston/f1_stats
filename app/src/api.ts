@@ -59,13 +59,6 @@ export interface ConstructorStanding {
     nationality: string | null; points: number; wins: number
 }
 
-async function getJson<T>(url: string): Promise<T | null> {
-    const res = await fetch(url)
-    if (res.status === 404) return null
-    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
-    return res.json() as Promise<T>
-}
-
 export interface CircuitWin { driverId: string; driver: string; wins: number }
 export interface PastEdition {
     year: number; round: number

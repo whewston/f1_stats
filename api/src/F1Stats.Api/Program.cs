@@ -17,7 +17,7 @@ builder.Services.AddScoped<IngestionService>();
 builder.Services.AddScoped<StatsService>(); 
 
 builder.Services.AddCors(o => o.AddPolicy("frontend", p => p
-    .WithOrigins("https://f1stats.whewston.co.uk", "http://localhost:5173")
+    .WithOrigins("https://f1stats.whewston.co.uk", "http://localhost:5173", "https://f1-stats-56u.pages.dev")
     .AllowAnyHeader()
     .AllowAnyMethod()));
 
